@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CuestionarioService } from './../servicios/cuestionario.service';
 import { IPregunta } from './../interfaces/interfaces';
 
@@ -8,16 +8,31 @@ import { IPregunta } from './../interfaces/interfaces';
   styleUrls: ['home.page.scss'],
   standalone: false,
 })
-export class HomePage {
+export class HomePage implements OnInit {
+  preguntas: IPregunta[] = [];
+  cargando: boolean = true;
 
-  //Importar servicio
-  constructor() {}
+  constructor(private cuestionarioService: CuestionarioService) {}
 
-  //Crear método para gestionar el onclick de RESPONDER
-  //Recibirá un IPregunta y llamará al servicio para realizar las operaciones necesarias.
+  ngOnInit() {
+    this.cargarPreguntas();
+  }
 
-  //Crear método para gestionar el onclick de Guardar
-  //No recibe parámetros y llamará al servicio para realizar las operaciones necesarias.
+  async cargarPreguntas() {
+    try {
+      this.cargando = true;
+      await this.cuestionarioService.cargarPreguntas();
+      this.preguntas = this.cuestionarioService.obtenerPreguntas();
+    } catch (error) {
+      console.error('Error al cargar las preguntas del cuestionario', error);
+    } finally {
+      this.cargando = false;
+    }
+  }
 
-
+  async responder(pregunta: IPregunta) {
+    if (pregunta.intentos > 0 && !pregunta.acierto) {
+      await this.cuestionarioService.abrirAlerta(pregunta);
+    }
+  }
 }

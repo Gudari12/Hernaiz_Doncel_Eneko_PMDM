@@ -1,26 +1,58 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Cuestionario
+      Galdetegia
     </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <!-- Leer todas las preguntas del cuestionario-->
-  <ion-list>
-    <ion-item>
-      <!-- añadir el logotipo -->
-      <!-- Añadir ion-badge para el caso de acertar la respuesta, contador de intentos y mostrar todos los intentos incorrectos
-      -- 1-Si se acierta: Poner color success y mostrarlo a la derecha de la página (ver-> slot)
-      -- 2-Si se falla: Poner color danger y mostrarlo a la derecha de la página (ver-> slot)
-      -- 3-Si hay intentos incorrectos, mostrarlos con color warning y mostrarlo a la derecha de la página (ver-> slot)
-      -->
+  <!-- Indicador de carga mientras se cargan las preguntas -->
+  <div *ngIf="cargando" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
 
-      <!-- Añadir botón para responder mediante un-->
+  <!-- Lista de preguntas del cuestionario con logos y botones de respuesta -->
+  <ion-list *ngIf="!cargando && preguntas.length > 0">
+    <!-- Iteración sobre cada pregunta del cuestionario -->
+    <ion-item *ngFor="let pregunta of preguntas" lines="full">
+      <!-- Imagen del logotipo de la marca en la izquierda -->
+      <ion-img [src]="pregunta.logotipo" slot="start" style="max-width: 80px; margin-right: 10px;"></ion-img>
 
+      <!-- Contenedor central con badges de estado -->
+      <ion-label>
+        <!-- Badge verde de acierto cuando se responde correctamente -->
+        <ion-badge *ngIf="pregunta.acierto" color="success" style="margin-right: 5px;">
+          ✓ Acierto
+        </ion-badge>
+
+        <!-- Badge naranja mostrando intentos restantes -->
+        <ion-badge *ngIf="!pregunta.acierto && pregunta.intentos > 0" color="warning" style="margin-right: 5px;">
+          Saiakerak: {{ pregunta.intentos }}
+        </ion-badge>
+
+        <!-- Badge rojo cuando se agotan los intentos -->
+        <ion-badge *ngIf="!pregunta.acierto && pregunta.intentos <= 0" color="danger" style="margin-right: 5px;">
+          Amaitu
+        </ion-badge>
+
+        <!-- Mostrar todas las respuestas incorrectas intentadas en esta pregunta -->
+        <div *ngIf="pregunta.respuestasIncorrectas && pregunta.respuestasIncorrectas.length > 0" style="margin-top: 8px;">
+          <ion-badge *ngFor="let respuestaIncorrecta of pregunta.respuestasIncorrectas" color="danger" style="margin-right: 5px; margin-bottom: 5px; display: inline-block;">
+            ✗ {{ respuestaIncorrecta }}
+          </ion-badge>
+        </div>
+      </ion-label>
+
+      <!-- Botón de respuesta en la derecha de cada pregunta -->
+      <ion-button 
+        (click)="responder(pregunta)"
+        [disabled]="pregunta.acierto || pregunta.intentos <= 0"
+        color="primary"
+        slot="end"
+        size="small">
+        Erantzun
+      </ion-button>
     </ion-item>
   </ion-list>
-  <!--Botón de guardar el cuestionario-->
-
 </ion-content>

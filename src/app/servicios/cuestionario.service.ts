@@ -1,7 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { AlertController } from '@ionic/angular';
 import { IPregunta } from './../interfaces/interfaces';
-import { Observable } from 'rxjs';
 import { GestionStorageService } from './gestion-storage.service';
 import { Injectable } from '@angular/core';
 
@@ -9,30 +8,86 @@ import { Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class CuestionarioService {
-  // Array para almacenar todas las preguntas del json. Recordad inicializar el array para evitar problemas
+  private preguntas: IPregunta[] = [];
+  private readonly STORAGE_KEY = 'preguntas_cuestionario';
+  private readonly INTENTOS_DEFECTO = 3;
 
-  //Añadir los componentes y servicios que se necesitan
-  constructor() {
-    //Cargar los datos
+  constructor(
+    private httpClient: HttpClient,
+    private alertController: AlertController,
+    private gestionStorageService: GestionStorageService
+  ) {}
+
+  obtenerPreguntas(): IPregunta[] {
+    return this.preguntas;
   }
 
-  // Método que devolverá un array de IPregunta, es decir, todas las preguntas del cuestionario en un array
+  async cargarPreguntas(): Promise<IPregunta[]> {
+    await this.leerJSON();
+    return this.preguntas;
+  }
 
+  private leerJSON(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.httpClient.get<any[]>('assets/datos/datos.json').subscribe({
+        next: (datos) => {
+          this.preguntas = datos.map(pregunta => ({
+            ...pregunta,
+            respuestasIncorrectas: [],
+            intentos: this.INTENTOS_DEFECTO,
+            acierto: false
+          }));
+          resolve();
+        },
+        error: (error) => {
+          console.error('Error al leer el archivo JSON de preguntas', error);
+          reject(error);
+        }
+      });
+    });
+  }
 
-  // Recupera las preguntas de Storage. Si no hay ninguna almacenada, las lee del fichero
-  // Controlar la asincronía.
+  async abrirAlerta(pregunta: IPregunta): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Zer markaren logotipoa da?',
+      inputs: [
+        {
+          name: 'respuesta',
+          type: 'text',
+          placeholder: 'Idatzi erantzuna',
+          id: 'input-respuesta'
+        }
+      ],
+      buttons: [
+        {
+          text: 'Utzi',
+          role: 'cancel'
+        },
+        {
+          text: 'Bidali',
+          handler: (data) => {
+            this.validarRespuesta(pregunta, data.respuesta);
+          }
+        }
+      ]
+    });
 
+    await alert.present();
+  }
 
-  // Lee los datos de un fichero y los almacena en un array
+  private validarRespuesta(pregunta: IPregunta, respuestaIngresada: string): void {
+    const respuestaLimpia = respuestaIngresada.trim().toLowerCase();
+    const respuestaCorrecta = pregunta.respuesta.trim().toLowerCase();
 
+    if (respuestaLimpia === respuestaCorrecta) {
+      pregunta.acierto = true;
+    } else {
+      pregunta.respuestasIncorrectas.push(respuestaIngresada);
+      pregunta.intentos--;
+    }
+  }
 
-  // Abre una alerta con el enunciado de la pregunta y comprueba la respuesta
-  // 1- En función de si es correcta o no, actualiza el estado de acierto.
-  // 2- Si no se acierta:
-  // 2.1- Restará el valor de los intentos
-  // 2.2- Guardará el valor añadido en el array respuestasIncorrectas
-
-
-  // Almacenar el array de preguntas en Storage
-
+  guardarEnStorage(): Promise<void> {
+    return this.gestionStorageService.setObject(this.STORAGE_KEY, this.preguntas);
+  }
 }
